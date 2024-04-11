@@ -18,7 +18,7 @@ import bpy
 import numpy as np
 
 # path to your mesh
-MESH_PATH = "../out/bob/mesh"
+MESH_PATH = "<some director>"
 
 RESOLUTION = 512
 SAMPLES = 64
@@ -61,7 +61,8 @@ scene.render.image_settings.file_format = 'PNG'  # set output format to .png
 
 ################### Import obj mesh ###################
 
-imported_object = bpy.ops.import_scene.obj(filepath=os.path.join(MESH_PATH, "mesh.obj"), axis_forward = '-Z', axis_up = 'Y')
+#imported_object = bpy.ops.wm.obj_import(filepath=os.path.join(MESH_PATH, "mesh.obj"), axis_forward = '-Z', axis_up = 'Y')
+imported_object = bpy.ops.wm.obj_import(filepath=os.path.join(MESH_PATH, "mesh.obj"))
 obj_object = bpy.context.selected_objects[0]
 
 ################### Fix material graph ###################
@@ -69,7 +70,8 @@ obj_object = bpy.context.selected_objects[0]
 # Get material node tree, find BSDF and specular texture
 material = obj_object.active_material
 bsdf = material.node_tree.nodes["Principled BSDF"]
-image_node_ks = bsdf.inputs["Specular"].links[0].from_node
+print('bsdf.inputs',bsdf.inputs)
+image_node_ks = bsdf.inputs["Specular IOR Level"].links[0].from_node
 
 # Split the specular texture into metalness and roughness
 separate_node = material.node_tree.nodes.new(type="ShaderNodeSeparateRGB")
@@ -98,13 +100,13 @@ material.node_tree.links.new(normal_invert_node.outputs[0], normal_combine_node.
 material.node_tree.links.new(normal_separate_node.outputs['B'], normal_combine_node.inputs['B'])
 material.node_tree.links.new(normal_combine_node.outputs[0], normal_map_node.inputs["Color"])
 
-material.node_tree.links.remove(bsdf.inputs["Specular"].links[0])
+material.node_tree.links.remove(bsdf.inputs["Specular IOR Level"].links[0])
 
 # Set default values
-bsdf.inputs["Specular"].default_value = 0.5
-bsdf.inputs["Specular Tint"].default_value = 0.0
-bsdf.inputs["Sheen Tint"].default_value = 0.0
-bsdf.inputs["Clearcoat Roughness"].default_value = 0.0
+bsdf.inputs["Specular IOR Level"].default_value = 0.5
+bsdf.inputs["Specular Tint"].default_value = [0.0, 0.0, 0.0, 0.0]
+bsdf.inputs["Sheen Tint"].default_value = [0.0, 0.0, 0.0, 0.0]
+#bsdf.inputs["Clearcoat Roughness"].default_value = [0.0, 0.0, 0.0]
 
 ################### Load HDR probe ###################
 
@@ -112,7 +114,9 @@ texcoord = scene.world.node_tree.nodes.new(type="ShaderNodeTexCoord")
 mapping = scene.world.node_tree.nodes.new(type="ShaderNodeMapping")
 mapping.inputs['Rotation'].default_value = [0, 0, -np.pi*0.5]
 envmap = scene.world.node_tree.nodes.new(type="ShaderNodeTexEnvironment")
-envmap.image = bpy.data.images.load(os.path.join(MESH_PATH, "probe.hdr"))
+
+HDR_PATH="<somedirector>"
+envmap.image = bpy.data.images.load(os.path.join(MESH_PATH, "/mud_road_puresky_4k.hdr"))
 
 scene.world.node_tree.links.new(envmap.outputs['Color'], scene.world.node_tree.nodes['Background'].inputs['Color'])
 scene.world.node_tree.links.new(texcoord.outputs['Generated'], mapping.inputs['Vector'])
